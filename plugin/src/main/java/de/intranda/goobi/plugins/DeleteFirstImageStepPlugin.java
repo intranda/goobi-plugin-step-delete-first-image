@@ -1,5 +1,11 @@
 package de.intranda.goobi.plugins;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+
 /**
  * This file is part of a plugin for Goobi - a Workflow tool for the support of mass digitization.
  *
@@ -20,8 +26,10 @@ package de.intranda.goobi.plugins;
  */
 
 import java.util.HashMap;
+import java.util.List;
 
 import org.apache.commons.configuration.SubnodeConfiguration;
+import org.apache.commons.lang.StringUtils;
 import org.goobi.beans.Step;
 import org.goobi.production.enums.PluginGuiType;
 import org.goobi.production.enums.PluginReturnValue;
@@ -30,22 +38,22 @@ import org.goobi.production.enums.StepReturnValue;
 import org.goobi.production.plugin.interfaces.IStepPluginVersion2;
 
 import de.sub.goobi.config.ConfigPlugins;
+import de.sub.goobi.helper.StorageProvider;
+import de.sub.goobi.helper.exceptions.DAOException;
+import de.sub.goobi.helper.exceptions.SwapException;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import net.xeoh.plugins.base.annotations.PluginImplementation;
 
 @PluginImplementation
 @Log4j2
-public class SampleStepPlugin implements IStepPluginVersion2 {
+public class DeleteFirstImageStepPlugin implements IStepPluginVersion2 {
     
     @Getter
-    private String title = "intranda_step_sample";
+    private String title = "intranda_step_deleteFirstImage";
     @Getter
     private Step step;
-    @Getter
-    private String value;
-    @Getter 
-    private boolean allowTaskFinishButtons;
+    private String namepartSplitter = "_";
     private String returnPath;
 
     @Override
@@ -55,22 +63,18 @@ public class SampleStepPlugin implements IStepPluginVersion2 {
                 
         // read parameters from correct block in configuration file
         SubnodeConfiguration myconfig = ConfigPlugins.getProjectAndStepConfig(title, step);
-        value = myconfig.getString("value", "default value"); 
-        allowTaskFinishButtons = myconfig.getBoolean("allowTaskFinishButtons", false);
-        log.info("Sample step plugin initialized");
+        namepartSplitter = myconfig.getString("namepartSplitter", "_"); 
+        log.info("DeleteFirstImage step plugin initialized");
     }
 
     @Override
     public PluginGuiType getPluginGuiType() {
-        return PluginGuiType.FULL;
-        // return PluginGuiType.PART;
-        // return PluginGuiType.PART_AND_FULL;
-        // return PluginGuiType.NONE;
+        return PluginGuiType.NONE;
     }
 
     @Override
     public String getPagePath() {
-        return "/uii/plugin_step_sample.xhtml";
+        return "/uii/plugin_step_deleteFirstImage.xhtml";
     }
 
     @Override
@@ -107,9 +111,45 @@ public class SampleStepPlugin implements IStepPluginVersion2 {
     @Override
     public PluginReturnValue run() {
         boolean successfull = true;
-        // your logic goes here
         
-        log.info("Sample step plugin executed");
+        try {
+            Path masterFolderPath = Paths.get(step.getProzess().getImagesOrigDirectory(false));
+
+            Path mediaFolderPath = Paths.get(step.getProzess().getImagesTifDirectory(false));
+
+            List<Path> imagesInAllFolder = new ArrayList<>();
+
+            if (Files.exists(masterFolderPath)) {
+                imagesInAllFolder.addAll(StorageProvider.getInstance().listFiles(masterFolderPath.toString()));
+            }
+
+            if (Files.exists(mediaFolderPath)) {
+                imagesInAllFolder.addAll(StorageProvider.getInstance().listFiles(mediaFolderPath.toString()));
+            }
+
+            for (Path imageName : imagesInAllFolder) {
+                String filenameWithoutExtension = imageName.getFileName().toString();
+                filenameWithoutExtension = filenameWithoutExtension.substring(0, filenameWithoutExtension.lastIndexOf("."));
+                String[] nameParts = filenameWithoutExtension.split(namepartSplitter);
+                // just check the last token
+                String part = nameParts[nameParts.length -1];
+                // if all parts should be checked, uncomment this for loop
+//                for (String part : nameParts) {
+                    if (StringUtils.isNumeric(part) && part.length() > 1 ) {
+                        // check if it is 0, 00, 000, 0000, ....
+                        if (Integer.parseInt(part) == 0) {
+                            // delete image
+                            StorageProvider.getInstance().deleteFile(imageName);
+                        }
+                    }
+//                }
+            }
+
+        } catch (IOException | InterruptedException | SwapException | DAOException e) {
+            log.error(e);
+        }
+        
+        log.info("DeleteFirstImage step plugin executed");
         if (!successfull) {
             return PluginReturnValue.ERROR;
         }
