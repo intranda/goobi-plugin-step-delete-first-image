@@ -48,7 +48,7 @@ import net.xeoh.plugins.base.annotations.PluginImplementation;
 @PluginImplementation
 @Log4j2
 public class DeleteFirstImageStepPlugin implements IStepPluginVersion2 {
-    
+
     @Getter
     private String title = "intranda_step_deleteFirstImage";
     @Getter
@@ -60,10 +60,10 @@ public class DeleteFirstImageStepPlugin implements IStepPluginVersion2 {
     public void initialize(Step step, String returnPath) {
         this.returnPath = returnPath;
         this.step = step;
-                
+
         // read parameters from correct block in configuration file
         SubnodeConfiguration myconfig = ConfigPlugins.getProjectAndStepConfig(title, step);
-        namepartSplitter = myconfig.getString("namepartSplitter", "_"); 
+        namepartSplitter = myconfig.getString("namepartSplitter", "_");
         log.info("DeleteFirstImage step plugin initialized");
     }
 
@@ -91,7 +91,7 @@ public class DeleteFirstImageStepPlugin implements IStepPluginVersion2 {
     public String finish() {
         return "/uii" + returnPath;
     }
-    
+
     @Override
     public int getInterfaceVersion() {
         return 0;
@@ -101,7 +101,7 @@ public class DeleteFirstImageStepPlugin implements IStepPluginVersion2 {
     public HashMap<String, StepReturnValue> validate() {
         return null;
     }
-    
+
     @Override
     public boolean execute() {
         PluginReturnValue ret = run();
@@ -111,7 +111,7 @@ public class DeleteFirstImageStepPlugin implements IStepPluginVersion2 {
     @Override
     public PluginReturnValue run() {
         boolean successfull = true;
-        
+
         try {
             Path masterFolderPath = Paths.get(step.getProzess().getImagesOrigDirectory(false));
 
@@ -134,21 +134,21 @@ public class DeleteFirstImageStepPlugin implements IStepPluginVersion2 {
                 // just check the last token
                 String part = nameParts[nameParts.length -1];
                 // if all parts should be checked, uncomment this for loop
-//                for (String part : nameParts) {
-                    if (StringUtils.isNumeric(part) && part.length() > 1 ) {
-                        // check if it is 0, 00, 000, 0000, ....
-                        if (Integer.parseInt(part) == 0) {
-                            // delete image
-                            StorageProvider.getInstance().deleteFile(imageName);
-                        }
+                //                for (String part : nameParts) {
+                if (StringUtils.isNumeric(part) && part.length() > 1 ) {
+                    // check if it is 0, 00, 000, 0000, ....
+                    if (Integer.parseInt(part) == 0) {
+                        // delete image
+                        StorageProvider.getInstance().deleteFile(imageName);
                     }
-//                }
+                }
+                //                }
             }
 
-        } catch (IOException | InterruptedException | SwapException | DAOException e) {
+        } catch (IOException | SwapException | DAOException e) {
             log.error(e);
         }
-        
+
         log.info("DeleteFirstImage step plugin executed");
         if (!successfull) {
             return PluginReturnValue.ERROR;
