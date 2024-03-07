@@ -7,7 +7,7 @@
     <relativePath />
   </parent>
   <groupId>io.goobi.workflow.plugin</groupId>
-  <artifactId>plugin-step-deleteFirstImage</artifactId>
+  <artifactId>plugin-step-delete-first-image</artifactId>
   <packaging>pom</packaging>
   <modules>
     <module>module-base</module>
